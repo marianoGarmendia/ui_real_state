@@ -155,7 +155,7 @@ export const StreamProvider: React.FC<{ children: ReactNode }> = ({
 
   const setApiKey = (key: string) => {
     window.localStorage.setItem("lg:chat:apiKey", openai_api_key || "apiKey");
-    console.log(`API key set to ${key}`);
+ 
     
     _setApiKey(key);
   };

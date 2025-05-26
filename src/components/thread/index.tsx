@@ -120,7 +120,7 @@ export function Thread() {
   const firstMessageRef = useRef(0);
   const stream = useStreamContext();
 
-  console.log("stream ui: " , stream.values.ui);
+  
   
  
   const messages = stream.messages;
