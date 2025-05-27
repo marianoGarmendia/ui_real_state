@@ -31,7 +31,8 @@ const VoiceChat = () => {
     onMessage: (message) => {
       console.log("Received message:", message);
       console.log("Message content: ", message.message ,"de: ",message.source);
-      setMessagesConversation((prev) => [...prev, {text: message.message, source: message.source, id: Date.now().toString()}]);
+      const messageId = message.message === "" ? `"do-not-render-" + ${Date.now().toString()}` : Date.now().toString();
+      setMessagesConversation((prev) => [...prev, {text: message.message, source: message.source, id:messageId}]);
      if( message.source === "user" ) {
         addMessageUser({
           source: message.source ,
@@ -85,6 +86,7 @@ const VoiceChat = () => {
       // Replace with your actual agent ID or URL
       const conversationId = await conversation.startSession({
         agentId: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID!,
+   
       });
       console.log("Started conversation:", conversationId);
     } catch (error) {
@@ -111,6 +113,12 @@ const VoiceChat = () => {
       console.error("Error changing volume:", error);
     }
   };
+
+  useEffect(() => {
+    handleStartConversation();
+    conversation.sendUserMessage("hola!")
+    
+  }, []);
 
   return (
     <Card className="w-full max-w-md mx-auto">

@@ -34,7 +34,7 @@ function CustomComponent({
     }
   );
   
-  console.log("customComponents", customComponents);
+  // console.log("customComponents", customComponents);
   
 
   const wrapperRef = useRef<HTMLDivElement>(null)

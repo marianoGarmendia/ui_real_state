@@ -1,13 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Product } from './PropertyCard';
-
-
+import React, { useState, useEffect, useRef } from "react";
+import { Product } from "./PropertyCard";
 
 interface CarouselProps {
   items: Product[];
 }
 
-const PropertiesCarousel: React.FC<CarouselProps> = ({items}) => {
+const PropertiesCarousel: React.FC<CarouselProps> = ({ items }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(1);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -25,8 +23,8 @@ const PropertiesCarousel: React.FC<CarouselProps> = ({items}) => {
       setCurrentPage(0);
     };
     updateLayout();
-    window.addEventListener('resize', updateLayout);
-    return () => window.removeEventListener('resize', updateLayout);
+    window.addEventListener("resize", updateLayout);
+    return () => window.removeEventListener("resize", updateLayout);
   }, []);
 
   const pageCount = Math.ceil(items.length / itemsPerPage);
@@ -56,7 +54,10 @@ const PropertiesCarousel: React.FC<CarouselProps> = ({items}) => {
   };
 
   return (
-    <div className="relative w-full overflow-hidden" ref={wrapperRef}>
+    <div
+      className="relative w-full overflow-hidden"
+      ref={wrapperRef}
+    >
       <div
         ref={trackRef}
         className="flex transition-transform duration-300 ease-in-out"
@@ -70,24 +71,28 @@ const PropertiesCarousel: React.FC<CarouselProps> = ({items}) => {
             className="flex-shrink-0 px-2"
             style={{ width: `${100 / itemsPerPage}%` }}
           >
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl">
+            <div className="overflow-hidden rounded-2xl bg-white shadow-lg hover:shadow-2xl">
               <img
-                src={prop.image_url}
-                alt=""
-                className="w-full h-48 object-cover"
+                src={
+                  prop.image_url ??
+                  "https://blog.wasi.co/wp-content/uploads/2019/07/claves-fotografia-inmobiliaria-exterior-casa-software-inmobiliario-wasi.jpg"
+                }
+                alt={prop.direccion}
+                className="h-48 w-full object-cover"
               />
               <div className="p-4">
-                <p className="text-gray-600 text-sm mb-2">
-                  {prop.caracteristicas.join(', ')}
+                <p className="mb-2 text-sm text-gray-600">
+                  {prop.caracteristicas.join(", ")}
                 </p>
                 <p className="text-lg font-bold text-green-600">
-                  {prop.moneda}{prop.precio}
+                  {prop.moneda}
+                  {prop.precio}
                 </p>
                 <a
-                  href={prop.url}
+                  href={prop.url ?? "#"}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-500 text-sm mt-2 inline-block"
+                  className="mt-2 inline-block text-sm text-blue-500"
                 >
                   Ver publicación
                 </a>
@@ -101,7 +106,7 @@ const PropertiesCarousel: React.FC<CarouselProps> = ({items}) => {
       <button
         onClick={prevPage}
         disabled={currentPage === 0}
-        className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white p-2 rounded-full shadow disabled:opacity-50"
+        className="absolute top-1/2 left-2 -translate-y-1/2 transform rounded-full bg-white p-2 shadow disabled:opacity-50"
         aria-label="Anterior"
       >
         ‹
@@ -109,20 +114,20 @@ const PropertiesCarousel: React.FC<CarouselProps> = ({items}) => {
       <button
         onClick={nextPage}
         disabled={currentPage === pageCount - 1}
-        className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white p-2 rounded-full shadow disabled:opacity-50"
+        className="absolute top-1/2 right-2 -translate-y-1/2 transform rounded-full bg-white p-2 shadow disabled:opacity-50"
         aria-label="Siguiente"
       >
         ›
       </button>
 
       {/* Indicadores (dots) */}
-      <div className="flex justify-center mt-2 space-x-1">
+      <div className="mt-2 flex justify-center space-x-1">
         {Array.from({ length: pageCount }).map((_, idx) => (
           <button
             key={idx}
             onClick={() => setCurrentPage(idx)}
             className={`h-2 w-2 rounded-full transition-colors ${
-              idx === currentPage ? 'bg-gray-800' : 'bg-gray-300'
+              idx === currentPage ? "bg-gray-800" : "bg-gray-300"
             }`}
             aria-label={`Página ${idx + 1}`}
           />

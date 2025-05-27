@@ -33,6 +33,7 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 import {streamTextSpeech} from '@/components/eleven-stream'
 import WhatsappAhare from "../icons/whatsapp";
 import VoiceTranscriber from "../AudioRecorder";
+import ToolMessageProp from "@/components/ToolMessageProp"
 
 // import naturgy_logo from "../../../assets/naturgy_logo_text-removebg.png";
 // import naturgy_logo_chat from "../../../assets/naturgy.png";
@@ -331,30 +332,30 @@ export function Thread() {
   const prevMessageLength = useRef(0);
   const playMessageAudio = useRef(true);
 
-  useEffect(() => {
-    if (
-      messages.length !== prevMessageLength.current &&
-      messages?.length &&
-      messages[messages.length - 1].type === "ai"
-    ) {
-      setFirstTokenReceived(true);
-    }
-    if (prevMessageLength.current === messages.length) return;
-    if (
-      messages.length &&
-      messages[messages.length - 1].type === "ai" &&
-      playMessageAudio.current
-    ) {
-      const lastMessage = messages[messages.length - 1]
-      if(lastMessage.type !== "ai") return;
-      handleTranscription(messages[messages.length - 1].content as string);
-      // streamTextSpeech(messages[messages.length - 1].content as string);
+  // useEffect(() => {
+  //   if (
+  //     messages.length !== prevMessageLength.current &&
+  //     messages?.length &&
+  //     messages[messages.length - 1].type === "ai"
+  //   ) {
+  //     setFirstTokenReceived(true);
+  //   }
+  //   if (prevMessageLength.current === messages.length) return;
+  //   if (
+  //     messages.length &&
+  //     messages[messages.length - 1].type === "ai" &&
+  //     playMessageAudio.current
+  //   ) {
+  //     const lastMessage = messages[messages.length - 1]
+  //     if(lastMessage.type !== "ai") return;
+  //     handleTranscription(messages[messages.length - 1].content as string);
+  //     // streamTextSpeech(messages[messages.length - 1].content as string);
       
-      // playMessageAudio.current = false; // Evita reproducir el audio de mensajes anteriores
-    }
+  //     // playMessageAudio.current = false; // Evita reproducir el audio de mensajes anteriores
+  //   }
 
-    prevMessageLength.current = messages.length;
-  }, [messages]);
+  //   prevMessageLength.current = messages.length;
+  // }, [messages]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -522,11 +523,11 @@ export function Thread() {
             <div className="flex items-center gap-4">
               <div className="flex items-center">
                 <WhatsappAhare />
-                <button
+                {/* <button
                   onClick={() => synthesize("Hola, soy una voz de prueba")}
                 >
                   Reproducir voz
-                </button>
+                </button> */}
                 {/* <OpenGitHubRepo /> */}
               </div>
               {/* <TooltipIconButton
@@ -552,92 +553,71 @@ export function Thread() {
               chatStarted && "grid grid-rows-[1fr_auto]",
             )}
             contentClassName="pt-8 pb-16  max-w-3xl mx-auto flex flex-col gap-4 w-full"
-            // content={
-            //   <>
-            //     {messagesConversation
-            //       .filter((m) => !m.id?.startsWith(DO_NOT_RENDER_ID_PREFIX))
-            //       .map((message, index) => {
-            //         const key = message.id || `${message.source}-${index}`;
-            //         const isUser = message.source === "user";
-            //         const isAgent = message.source === "ai";
-
-            //         if (isUser) {
-            //           return (
-            //             <HumanMessage
-            //               key={key}
-            //               message={{
-            //                 id: message.id ?? crypto.randomUUID(), // genera un ID si no viene uno
-            //                 content: message.text,
-            //                 type: message.source === "user" ? "human" : "ai",
-            //                 additional_kwargs: {},
-            //                 response_metadata: {},
-                           
-            //               }}
-            //               isLoading={isLoading}
-            //             />
-            //           );
-            //         }
-
-            //         if (isAgent) {
-            //           return (
-            //             <AssistantMessage
-            //               key={key}
-            //               message={{
-            //                 id: message.id ?? crypto.randomUUID(), // genera un ID si no viene uno
-            //                 content: message.text,
-            //                 type: message.source === "user" ? "human" : "ai",
-            //                 additional_kwargs: {},
-            //                 response_metadata: {},
-                           
-            //               }}
-            //               isLoading={isLoading}
-            //               handleRegenerate={handleRegenerate}
-            //             />
-            //           );
-            //         }
-
-            //         // Si querés manejar otros tipos de mensaje o dejar un fallback:
-            //         return null;
-            //       })}
-
-            //     {/* Caso especial: interrupción sin mensajes del agente */}
-            //     {hasNoAIOrToolMessages && !!stream.interrupt && (
-            //       <AssistantMessage
-            //         key="interrupt-msg"
-            //         message={undefined}
-            //         isLoading={isLoading}
-            //         handleRegenerate={handleRegenerate}
-            //       />
-            //     )}
-
-            //     {/* Cargando primera respuesta del asistente */}
-            //     {isLoading && !firstTokenReceived && (
-            //       <AssistantMessageLoading />
-            //     )}
-            //   </>
-            // }
             content={
               <>
-                {messages
+                {messagesConversation
                   .filter((m) => !m.id?.startsWith(DO_NOT_RENDER_ID_PREFIX))
-                  .map((message, index) =>
-                    message.type === "human" ? (
-                      <HumanMessage
-                        key={message.id || `${message.type}-${index}`}
-                        message={message}
-                        isLoading={isLoading}
-                      />
-                    ) : (
-                      <AssistantMessage
-                        key={message.id || `${message.type}-${index}`}
-                        message={message}
-                        isLoading={isLoading}
-                        handleRegenerate={handleRegenerate}
-                      />
-                    ),
-                  )}
-                {/* Special rendering case where there are no AI/tool messages, but there is an interrupt.
-                    We need to render it outside of the messages list, since there are no messages to render */}
+                  .map((message, index) => {
+                    const key = message.id || `${message.source}-${index}`;
+                    const isUser = message.source === "user";
+                    const isAgent = message.source === "ai";
+                    const isTool = message.source === "tool";
+
+                    if (isUser) {
+                      return (
+                        <HumanMessage
+                          key={key}
+                          message={{
+                            id: message.id ?? crypto.randomUUID(), // genera un ID si no viene uno
+                            content: message.text,
+                            type: message.source === "user" ? "human" : "ai",
+                            additional_kwargs: {},
+                            response_metadata: {},
+                           
+                          }}
+                          isLoading={isLoading}
+                        />
+                      );
+                    }
+
+                    if (isAgent) {
+                      return (
+                        <AssistantMessage
+                          key={key}
+                          message={{
+                            id: message.id ?? crypto.randomUUID(), // genera un ID si no viene uno
+                            content: message.text,
+                            type: message.source === "user" ? "human" : "ai",
+                            additional_kwargs: {},
+                            response_metadata: {},
+                           
+                          }}
+                          isLoading={isLoading}
+                          handleRegenerate={handleRegenerate}
+                        />
+                      );
+                    }
+
+                    if (isTool) {
+                      // Aquí podrías manejar los mensajes de herramientas
+                      // Por ejemplo, si tienes un componente específico para herramientas:
+                      return (
+                        <ToolMessageProp
+                          key={key}
+                          propiedades={
+                          JSON.parse(message.content)
+                          }
+                          isLoading={isLoading}
+                          handleRegenerate={handleRegenerate}
+                        />
+                      );
+                    }
+
+                    // Si querés manejar otros tipos de mensaje o dejar un fallback:
+                    return null;
+                  })}
+
+                {/* Caso especial: interrupción sin mensajes del agente */}
                 {hasNoAIOrToolMessages && !!stream.interrupt && (
                   <AssistantMessage
                     key="interrupt-msg"
@@ -646,11 +626,48 @@ export function Thread() {
                     handleRegenerate={handleRegenerate}
                   />
                 )}
+
+                {/* Cargando primera respuesta del asistente */}
                 {isLoading && !firstTokenReceived && (
                   <AssistantMessageLoading />
                 )}
               </>
             }
+            // content={
+            //   <>
+            //     {messages
+            //       .filter((m) => !m.id?.startsWith(DO_NOT_RENDER_ID_PREFIX))
+            //       .map((message, index) =>
+            //         message.type === "human" ? (
+            //           <HumanMessage
+            //             key={message.id || `${message.type}-${index}`}
+            //             message={message}
+            //             isLoading={isLoading}
+            //           />
+            //         ) : (
+            //           <AssistantMessage
+            //             key={message.id || `${message.type}-${index}`}
+            //             message={message}
+            //             isLoading={isLoading}
+            //             handleRegenerate={handleRegenerate}
+            //           />
+            //         ),
+            //       )}
+            //     {/* Special rendering case where there are no AI/tool messages, but there is an interrupt.
+            //         We need to render it outside of the messages list, since there are no messages to render */}
+            //     {hasNoAIOrToolMessages && !!stream.interrupt && (
+            //       <AssistantMessage
+            //         key="interrupt-msg"
+            //         message={undefined}
+            //         isLoading={isLoading}
+            //         handleRegenerate={handleRegenerate}
+            //       />
+            //     )}
+            //     {isLoading && !firstTokenReceived && (
+            //       <AssistantMessageLoading />
+            //     )}
+            //   </>
+            // }
             footer={
               <div className="sticky bottom-0 flex flex-col items-center gap-4 bg-white">
                 {/* {!chatStarted && (
@@ -703,8 +720,8 @@ export function Thread() {
                   </div>
                 ) : (
                   <div className="bg-muted relative z-10 mx-auto mb-8 w-full max-w-3xl rounded-2xl border shadow-xs">
-                    {/* <VoiceChat /> */}
-                   <VoiceTranscriberAutoStop ref={transcriberRef} onTranscription={handleSubmitVoicesMessages} />
+                    <VoiceChat />
+                   {/* <VoiceTranscriberAutoStop ref={transcriberRef} onTranscription={handleSubmitVoicesMessages} /> */}
 
                     
 
