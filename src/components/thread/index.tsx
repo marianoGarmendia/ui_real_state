@@ -1,23 +1,27 @@
 "use client";
 
 import { v4 as uuidv4 } from "uuid";
-import { ReactNode, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { ReactNode, use, useEffect, useRef } from "react";
+import { m, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useStreamContext } from "@/providers/Stream";
 import { useState, FormEvent } from "react";
 import { Button } from "../ui/button";
 import { Checkpoint, Message } from "@langchain/langgraph-sdk";
-import PropertiesCarousel from "../ui/PropertyCarousel";
-
+import VoiceChat from "../VoiceComponent";
 
 import { AssistantMessage, AssistantMessageLoading } from "./messages/ai";
 import { HumanMessage } from "./messages/human";
+
+import { useVoiceChat } from "@/contexts/VoiceChatContexts";
+// import  AudioRecorder  from "../AudioRecorder";
 
 import {
   DO_NOT_RENDER_ID_PREFIX,
   ensureToolCallsHaveResponses,
 } from "@/lib/ensure-tool-responses";
+
+import VoiceTranscriberAutoStop from "../VoiceTranscriberAutoStop";
 
 import Image from "next/image";
 import { ArrowDown, LoaderCircle } from "lucide-react";
@@ -28,6 +32,7 @@ import { toast } from "sonner";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 import WhatsappAhare from "../icons/whatsapp";
+import VoiceTranscriber from "../AudioRecorder";
 
 // import naturgy_logo from "../../../assets/naturgy_logo_text-removebg.png";
 // import naturgy_logo_chat from "../../../assets/naturgy.png";
@@ -35,6 +40,7 @@ import WhatsappAhare from "../icons/whatsapp";
 
 import win_logo from "../../../assets/logo_mym.png";
 import carla_real_state from "../../../assets/carla_real_state.jpeg";
+import { play } from "@elevenlabs/elevenlabs-js";
 
 function StickyToBottomContent(props: {
   content: ReactNode;
@@ -108,6 +114,15 @@ export function Thread() {
     parseAsBoolean.withDefault(false),
   );
   const [reference] = useQueryState("reference");
+  const {
+    messagesVoicesAi,
+    messagesVoicesUser,
+    startRecording,
+    stopRecording,
+    transcription,
+    recording,
+    messagesConversation,
+  } = useVoiceChat();
   // const [hideToolCalls, setHideToolCalls] = useQueryState(
   //   "hideToolCalls",
   //   parseAsBoolean.withDefault(false),
@@ -120,11 +135,112 @@ export function Thread() {
   const firstMessageRef = useRef(0);
   const stream = useStreamContext();
 
+  // En esta funcion recibo un blob para reproducir el audio
+
+  const synthesize = async (text: string) => {
+    const res = await fetch("/api/speak", {
+      method: "POST",
+      body: JSON.stringify({
+        text,
+        voiceID: "h2cd3gvcqTp3m65Dysk7", // ID de voz de Carla
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audio.play();
+  };
+
+  console.log("message conversation: ", messagesConversation);
   
-  
- 
+
+  // Manejar los mensajes de voz
+  // useEffect(() => {
+  //   console.log("Mensajes de voz recibidos: ", messagesVoices);
+
+  //   if(messagesVoices.length === 0) return;
+
+  //   const lastMessage = messagesVoices[messagesVoices.length - 1];
+  //   if (lastMessage.text.trim() === "") return;
+  //   // setInput(lastMessage.text);
+  //   console.log("Ultimo mensaje de voz y enviado: ", lastMessage.text);
+
+  //   handleSubmitVoicesMessages(lastMessage.text);
+
+  // },[messagesVoices]);
+
+  //Manejar el envio de los mensajes de voz
+  const handleSubmitVoicesMessages = (text: string) => {
+    setFirstTokenReceived(false);
+
+    const newHumanMessage: Message = {
+      id: uuidv4(),
+      type: "human",
+      content: text,
+    };
+
+    const toolMessages = ensureToolCallsHaveResponses(stream.messages);
+    stream.submit(
+      { messages: [...toolMessages, newHumanMessage] },
+
+      {
+        config: { configurable: { user_id: 77, reference: reference } },
+        streamMode: ["values"],
+        optimisticValues: (prev) => ({
+          ...prev,
+          messages: [
+            ...(prev.messages ?? []),
+            ...toolMessages,
+            newHumanMessage,
+          ],
+        }),
+      },
+    );
+  };
+
+  // Enviamos el mensaje de voz del usuario
+  useEffect(() => {
+    console.log("Mensajes de voz del usuario: ", messagesVoicesUser);
+
+    if (messagesVoicesUser.length === 0) return;
+
+    const lastMessage = messagesVoicesUser[messagesVoicesUser.length - 1];
+    if (lastMessage.text.trim() === "") return;
+    // setInput(lastMessage.text);
+    console.log(
+      "Ultimo mensaje de voz del usuario y enviado: ",
+      lastMessage.text,
+    );
+
+    handleSubmitVoicesMessages(lastMessage.text);
+  }, [messagesVoicesUser]);
+
+  // Enviamos la transcripttion del audio
+
+  useEffect(() => {
+    console.log("Transcripción del audio: ", transcription);
+
+    if (!transcription || transcription.trim() === "") return;
+
+    // handleSubmitVoicesMessages(transcription);
+  }, [transcription]);
+
   const messages = stream.messages;
-  
+  console.log("messages del stream.messages: ", messages);
+
+  // useEffect(() => {
+  //   const lastMessage = messages[messages.length - 1];
+  //   if (lastMessage && lastMessage.type === "ai") {
+  //     console.log("Ultimo mensaje del stream: ", lastMessage.content);
+  //     setInput(lastMessage.content as string);
+
+  //   }
+  // }, [messages]);
+
   const isLoading = stream.isLoading;
 
   const lastError = useRef<string | undefined>(undefined);
@@ -138,7 +254,7 @@ export function Thread() {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (firstMessageRef.current !== 0) return;
-      if(threadId) return;
+      if (threadId) return;
 
       const newHumanMessage: Message = {
         id: `do-not-render-${uuidv4()}`,
@@ -163,12 +279,19 @@ export function Thread() {
         },
       );
       firstMessageRef.current = 1;
-      setInput("");
-      setShowinputField(true);
-    }, 10000); // Espera de 1 segundo
+      // setInput("");
+      // setShowinputField(true);
+    }, 1000); // Espera de 1 segundo
 
     return () => clearTimeout(timer); // Limpieza del temporizador al desmontar
-  }, [firstMessageRef ,stream , threadId]);
+  }, [firstMessageRef, stream, threadId]);
+
+  const handleTranscription = (transcription: string) => {
+    console.log("Transcripción recibida: ", transcription);
+    if (!transcription || transcription.trim() === "") return;
+
+    handleSubmitVoicesMessages(transcription)
+  }
 
   useEffect(() => {
     if (!stream.error) {
@@ -200,6 +323,8 @@ export function Thread() {
 
   // TODO: this should be part of the useStream hook
   const prevMessageLength = useRef(0);
+  const playMessageAudio = useRef(true);
+
   useEffect(() => {
     if (
       messages.length !== prevMessageLength.current &&
@@ -208,9 +333,15 @@ export function Thread() {
     ) {
       setFirstTokenReceived(true);
     }
-
-    
-    
+    if (prevMessageLength.current === messages.length) return;
+    if (
+      messages.length &&
+      messages[messages.length - 1].type === "ai" &&
+      playMessageAudio.current
+    ) {
+      synthesize(messages[messages.length - 1].content as string);
+      // playMessageAudio.current = false; // Evita reproducir el audio de mensajes anteriores
+    }
 
     prevMessageLength.current = messages.length;
   }, [messages]);
@@ -381,7 +512,11 @@ export function Thread() {
             <div className="flex items-center gap-4">
               <div className="flex items-center">
                 <WhatsappAhare />
-
+                <button
+                  onClick={() => synthesize("Hola, soy una voz de prueba")}
+                >
+                  Reproducir voz
+                </button>
                 {/* <OpenGitHubRepo /> */}
               </div>
               {/* <TooltipIconButton
@@ -407,6 +542,70 @@ export function Thread() {
               chatStarted && "grid grid-rows-[1fr_auto]",
             )}
             contentClassName="pt-8 pb-16  max-w-3xl mx-auto flex flex-col gap-4 w-full"
+            // content={
+            //   <>
+            //     {messagesConversation
+            //       .filter((m) => !m.id?.startsWith(DO_NOT_RENDER_ID_PREFIX))
+            //       .map((message, index) => {
+            //         const key = message.id || `${message.source}-${index}`;
+            //         const isUser = message.source === "user";
+            //         const isAgent = message.source === "ai";
+
+            //         if (isUser) {
+            //           return (
+            //             <HumanMessage
+            //               key={key}
+            //               message={{
+            //                 id: message.id ?? crypto.randomUUID(), // genera un ID si no viene uno
+            //                 content: message.text,
+            //                 type: message.source === "user" ? "human" : "ai",
+            //                 additional_kwargs: {},
+            //                 response_metadata: {},
+                           
+            //               }}
+            //               isLoading={isLoading}
+            //             />
+            //           );
+            //         }
+
+            //         if (isAgent) {
+            //           return (
+            //             <AssistantMessage
+            //               key={key}
+            //               message={{
+            //                 id: message.id ?? crypto.randomUUID(), // genera un ID si no viene uno
+            //                 content: message.text,
+            //                 type: message.source === "user" ? "human" : "ai",
+            //                 additional_kwargs: {},
+            //                 response_metadata: {},
+                           
+            //               }}
+            //               isLoading={isLoading}
+            //               handleRegenerate={handleRegenerate}
+            //             />
+            //           );
+            //         }
+
+            //         // Si querés manejar otros tipos de mensaje o dejar un fallback:
+            //         return null;
+            //       })}
+
+            //     {/* Caso especial: interrupción sin mensajes del agente */}
+            //     {hasNoAIOrToolMessages && !!stream.interrupt && (
+            //       <AssistantMessage
+            //         key="interrupt-msg"
+            //         message={undefined}
+            //         isLoading={isLoading}
+            //         handleRegenerate={handleRegenerate}
+            //       />
+            //     )}
+
+            //     {/* Cargando primera respuesta del asistente */}
+            //     {isLoading && !firstTokenReceived && (
+            //       <AssistantMessageLoading />
+            //     )}
+            //   </>
+            // }
             content={
               <>
                 {messages
@@ -419,15 +618,12 @@ export function Thread() {
                         isLoading={isLoading}
                       />
                     ) : (
-                     
-                        <AssistantMessage
-                          key={message.id || `${message.type}-${index}`}
-                          message={message}
-                          isLoading={isLoading}
-                          handleRegenerate={handleRegenerate}
-                        />
-                       
-                      
+                      <AssistantMessage
+                        key={message.id || `${message.type}-${index}`}
+                        message={message}
+                        isLoading={isLoading}
+                        handleRegenerate={handleRegenerate}
+                      />
                     ),
                   )}
                 {/* Special rendering case where there are no AI/tool messages, but there is an interrupt.
@@ -463,7 +659,6 @@ export function Thread() {
                   <div className="top-0 flex flex-col items-center gap-4 bg-white">
                     <div className="flex flex-col items-center gap-3">
                       <div className="flex flex-col items-center">
-                       
                         <Image
                           src={carla_real_state}
                           alt="Descripción de la imagen"
@@ -479,9 +674,9 @@ export function Thread() {
                         <p className="text-xl text-gray-700">Agente IA</p>
                       </div>
 
-                      <div className="mx-4 mb-6 rounded-lg bg-[#fef7ef] p-6  text-center">
-                        <p className="text-md mb-2 text-center last:mb-0 font-bold">
-                          Especialista de Real State 
+                      <div className="mx-4 mb-6 rounded-lg bg-[#fef7ef] p-6 text-center">
+                        <p className="text-md mb-2 text-center font-bold last:mb-0">
+                          Especialista de Real State
                         </p>
                         <p>para inmobiliaria MYM</p>
                       </div>
@@ -498,7 +693,12 @@ export function Thread() {
                   </div>
                 ) : (
                   <div className="bg-muted relative z-10 mx-auto mb-8 w-full max-w-3xl rounded-2xl border shadow-xs">
-                    <form
+                    {/* <VoiceChat /> */}
+
+                    <VoiceTranscriberAutoStop onTranscription={handleTranscription}/>
+                    {/* <VoiceTranscriber onRecording={startRecording} isRecording={recording} stopRecording={stopRecording}/> */}
+
+                    {/* <form
                       onSubmit={handleSubmit}
                       className="mx-auto grid max-w-3xl grid-rows-[1fr_auto] gap-2"
                     >
@@ -544,7 +744,7 @@ export function Thread() {
                           </Button>
                         )}
                       </div>
-                    </form>
+                    </form> */}
                   </div>
                 )}
                 {chatStarted && (

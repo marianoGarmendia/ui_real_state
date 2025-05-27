@@ -152,7 +152,7 @@ export const StreamProvider: React.FC<{ children: ReactNode }> = ({
 
   const openai_api_key = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
   
-
+// No está funcionando para cuando esta dentro de un ifram porque se refrezca el iframe mismo
   const setApiKey = (key: string) => {
     window.localStorage.setItem("lg:chat:apiKey", openai_api_key || "apiKey");
  
