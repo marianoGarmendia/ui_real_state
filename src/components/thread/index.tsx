@@ -21,7 +21,7 @@ import {
   ensureToolCallsHaveResponses,
 } from "@/lib/ensure-tool-responses";
 
-import VoiceTranscriberAutoStop from "../VoiceTranscriberAutoStop";
+
 
 import Image from "next/image";
 import { ArrowDown, LoaderCircle } from "lucide-react";
@@ -30,7 +30,7 @@ import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import ThreadHistory from "./history";
 import { toast } from "sonner";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-
+import {streamTextSpeech} from '@/components/eleven-stream'
 import WhatsappAhare from "../icons/whatsapp";
 import VoiceTranscriber from "../AudioRecorder";
 
@@ -40,7 +40,7 @@ import VoiceTranscriber from "../AudioRecorder";
 
 import win_logo from "../../../assets/logo_mym.png";
 import carla_real_state from "../../../assets/carla_real_state.jpeg";
-import { play } from "@elevenlabs/elevenlabs-js";
+import VoiceTranscriberAutoStop, { VoiceTranscriberRef } from "@/components/VoiceTranscriberAutoStop";
 
 function StickyToBottomContent(props: {
   content: ReactNode;
@@ -83,29 +83,7 @@ function ScrollToBottom(props: { className?: string }) {
   );
 }
 
-// function OpenGitHubRepo() {
-//   return (
-//     <TooltipProvider>
-//       <Tooltip>
-//         <TooltipTrigger asChild>
-//           <a
-//             href="https://github.com/langchain-ai/agent-chat-ui"
-//             target="_blank"
-//             className="flex items-center justify-center"
-//           >
-//             <GitHubSVG
-//               width="24"
-//               height="24"
-//             />
-//           </a>
-//         </TooltipTrigger>
-//         <TooltipContent side="left">
-//           <p>Open GitHub repo</p>
-//         </TooltipContent>
-//       </Tooltip>
-//     </TooltipProvider>
-//   );
-// }
+
 
 export function Thread() {
   const [threadId] = useQueryState("threadId");
@@ -123,12 +101,17 @@ export function Thread() {
     recording,
     messagesConversation,
   } = useVoiceChat();
+
+   const transcriberRef = useRef<VoiceTranscriberRef>(null);
+
   // const [hideToolCalls, setHideToolCalls] = useQueryState(
   //   "hideToolCalls",
   //   parseAsBoolean.withDefault(false),
   // );
   const [showinputField, setShowinputField] = useState(false);
   const [hideToolCalls, setHideToolCalls] = useState(true);
+
+  
   const [input, setInput] = useState("");
   const [firstTokenReceived, setFirstTokenReceived] = useState(false);
   const isLargeScreen = useMediaQuery("(min-width: 1024px)");
@@ -152,10 +135,38 @@ export function Thread() {
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
+    audio.addEventListener("ended", () => {
+    console.log("✅ Audio terminado");
+    // setStartRecording(true)
+    // Aquí podés hacer algo cuando termine, como habilitar un botón, pasar al siguiente texto, etc.
+  });
+
     audio.play();
   };
 
   console.log("message conversation: ", messagesConversation);
+
+  const handleTranscription = async (text: string) => {
+    console.log("📝 Transcripción:", text);
+
+    // enviar texto al backend para sintetizar
+    const res = await fetch("/api/speak", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, voiceID: "h2cd3gvcqTp3m65Dysk7" }),
+    });
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+
+    audio.addEventListener("ended", () => {
+      console.log("🎧 Audio terminado, volviendo a escuchar...");
+      transcriberRef.current?.start();
+    });
+
+    audio.play();
+  };
   
 
   // Manejar los mensajes de voz
@@ -241,6 +252,7 @@ export function Thread() {
   //   }
   // }, [messages]);
 
+
   const isLoading = stream.isLoading;
 
   const lastError = useRef<string | undefined>(undefined);
@@ -286,12 +298,6 @@ export function Thread() {
     return () => clearTimeout(timer); // Limpieza del temporizador al desmontar
   }, [firstMessageRef, stream, threadId]);
 
-  const handleTranscription = (transcription: string) => {
-    console.log("Transcripción recibida: ", transcription);
-    if (!transcription || transcription.trim() === "") return;
-
-    handleSubmitVoicesMessages(transcription)
-  }
 
   useEffect(() => {
     if (!stream.error) {
@@ -339,7 +345,11 @@ export function Thread() {
       messages[messages.length - 1].type === "ai" &&
       playMessageAudio.current
     ) {
-      synthesize(messages[messages.length - 1].content as string);
+      const lastMessage = messages[messages.length - 1]
+      if(lastMessage.type !== "ai") return;
+      handleTranscription(messages[messages.length - 1].content as string);
+      // streamTextSpeech(messages[messages.length - 1].content as string);
+      
       // playMessageAudio.current = false; // Evita reproducir el audio de mensajes anteriores
     }
 
@@ -694,8 +704,10 @@ export function Thread() {
                 ) : (
                   <div className="bg-muted relative z-10 mx-auto mb-8 w-full max-w-3xl rounded-2xl border shadow-xs">
                     {/* <VoiceChat /> */}
+                   <VoiceTranscriberAutoStop ref={transcriberRef} onTranscription={handleSubmitVoicesMessages} />
 
-                    <VoiceTranscriberAutoStop onTranscription={handleTranscription}/>
+                    
+
                     {/* <VoiceTranscriber onRecording={startRecording} isRecording={recording} stopRecording={stopRecording}/> */}
 
                     {/* <form
