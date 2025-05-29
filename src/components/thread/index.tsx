@@ -218,6 +218,12 @@ export function Thread() {
     );
   };
 
+  useEffect(() => {
+    if(messagesVoicesUser.length === 0) return;
+    handleSubmitVoicesMessages(messagesVoicesUser[messagesVoicesUser.length - 1].text);
+  },[messagesVoicesUser])
+
+
 // Tomo la cola de mensajes y los proceso uno a uno enviandoselos a mi backend donde est el agente
 //   useEffect(() => {
 //   if (isProcessing || messageQueue.length === 0) return;

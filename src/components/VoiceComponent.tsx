@@ -67,6 +67,7 @@ const VoiceChat = () => {
       console.log("Debug info:", debugInfo);
       
     }    
+    
 
     
   });
@@ -137,6 +138,9 @@ const VoiceChat = () => {
    
   
   }, [status]);
+
+
+
 
   return (
     <Card className="w-full rounded-full flex justify-center items-center max-w-md mx-auto">
@@ -213,6 +217,7 @@ const VoiceChat = () => {
           animation: ping-smooth 1.2s ease-in-out infinite;
         }
       `}</style>
+        
     </div>
   
 
