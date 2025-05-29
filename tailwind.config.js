@@ -8,6 +8,15 @@ module.exports = {
   ],
   theme: {
     extend: {
+       animation: {
+        'pulse-custom': 'pulse-custom 1.2s ease-in-out infinite',
+      },
+      keyframes: {
+        'pulse-custom': {
+          '0%, 100%': { transform: 'scale(1)', opacity: '0.4' },
+          '50%': { transform: 'scale(1.4)', opacity: '0.7' },
+        },
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",

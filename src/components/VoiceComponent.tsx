@@ -1,16 +1,20 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+// import { Volume2 } from "lucide-react";
+
 
 import {useVoiceChat} from "@/contexts/VoiceChatContexts";
 
 // ElevenLabs
-import { useConversation } from "@11labs/react";
+import { useConversation , Mode, postOverallFeedback,  SessionConfig} from "@11labs/react";
 
 // UI
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+import { stat } from "fs";
+import { add } from "lodash";
 
 
 const VoiceChat = () => {
@@ -19,14 +23,17 @@ const VoiceChat = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const { addMessageUser, addMessageAi, setMessagesConversation } = useVoiceChat();
   
-  
+ 
 
   const conversation = useConversation({
     onConnect: () => {
       console.log("Connected to ElevenLabs");
+
+        
     },
     onDisconnect: () => {
       console.log("Disconnected from ElevenLabs");
+      handleStartConversation()
     },
     onMessage: (message) => {
       console.log("Received message:", message);
@@ -66,6 +73,8 @@ const VoiceChat = () => {
 
   const { status, isSpeaking } = conversation;
 
+
+
   useEffect(() => {
     // Request microphone permission on component mount
     const requestMicPermission = async () => {
@@ -86,6 +95,8 @@ const VoiceChat = () => {
       // Replace with your actual agent ID or URL
       const conversationId = await conversation.startSession({
         agentId: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID!,
+        
+
    
       });
       console.log("Started conversation:", conversationId);
@@ -115,14 +126,21 @@ const VoiceChat = () => {
   };
 
   useEffect(() => {
-    handleStartConversation();
-    conversation.sendUserMessage("hola!")
-    
-  }, []);
+    if(status === "disconnected") {
+      handleStartConversation();
+    }
+    if(status === "connected") {
+      console.log("snd first message");
+
+      conversation.sendUserMessage("Hola!")
+    }
+   
+  
+  }, [status]);
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
+    <Card className="w-full rounded-full flex justify-center items-center max-w-md mx-auto">
+      {/* <CardHeader>
         <CardTitle className="flex items-center justify-between">
           Voice Chat
           <div className="flex gap-2">
@@ -163,9 +181,44 @@ const VoiceChat = () => {
                 Start Conversation
               </Button>
             )}
-          </div>
+          </div> */}
 
-          <div className="text-center text-sm">
+        
+     <div className="relative w-32 h-32 flex items-center justify-center">
+      {isSpeaking && (
+        <span className="absolute w-full h-full rounded-full bg-red-500 animate-ping-smooth" />
+      )}
+      <div
+        className={`z-10 w-16 h-16 rounded-full ${
+          isSpeaking ? "bg-red-600" : "bg-gray-400"
+        } transition-colors duration-300`}
+      />
+      <style jsx>{`
+        @keyframes ping-smooth {
+          0% {
+            transform: scale(1);
+            opacity: 0.6;
+          }
+          50% {
+            transform: scale(1.5);
+            opacity: 0.2;
+          }
+          100% {
+            transform: scale(1);
+            opacity: 0;
+          }
+        }
+
+        .animate-ping-smooth {
+          animation: ping-smooth 1.2s ease-in-out infinite;
+        }
+      `}</style>
+    </div>
+  
+
+          
+
+          {/* <div className="text-center text-sm">
             {status === "connected" && (
               <p className="text-green-600">
                 {isSpeaking ? "Agent is speaking..." : "Listening..."}
@@ -177,11 +230,23 @@ const VoiceChat = () => {
                 Please allow microphone access to use voice chat
               </p>
             )}
-          </div>
-        </div>
-      </CardContent>
+          </div> */}
+        {/* </div>
+      </CardContent> */}
     </Card>
   );
 };
+
+// export default function SpeakingIndicator({ isSpeaking }: { isSpeaking: boolean }) {
+//   return (
+//     <div className="relative flex justify-center items-center w-10 h-10">
+//       <Volume2
+//         className={`w-8 h-8 ${
+//           isSpeaking ? "text-red-500 animate-pulse" : "text-gray-400"
+//         } transition-colors duration-300`}
+//       />
+//     </div>
+//   );
+// }
 
 export default VoiceChat;

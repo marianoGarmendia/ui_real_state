@@ -10,6 +10,8 @@ import { Button } from "../ui/button";
 import { Checkpoint, Message } from "@langchain/langgraph-sdk";
 import VoiceChat from "../VoiceComponent";
 
+// import VoiceTranscriberContinued , {VoiceTranscriberRef} from "@/components/VoiceContinuedTranscribed";
+// import VoiceTranscriberAutoStop from "@/components/VoiceTranscriberAutoStop";
 import { AssistantMessage, AssistantMessageLoading } from "./messages/ai";
 import { HumanMessage } from "./messages/human";
 
@@ -32,7 +34,7 @@ import { toast } from "sonner";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import {streamTextSpeech} from '@/components/eleven-stream'
 import WhatsappAhare from "../icons/whatsapp";
-import VoiceTranscriber from "../AudioRecorder";
+import VoiceTranscriber  from "../AudioRecorder";
 import ToolMessageProp from "@/components/ToolMessageProp"
 
 // import naturgy_logo from "../../../assets/naturgy_logo_text-removebg.png";
@@ -41,7 +43,7 @@ import ToolMessageProp from "@/components/ToolMessageProp"
 
 import win_logo from "../../../assets/logo_mym.png";
 import carla_real_state from "../../../assets/carla_real_state.jpeg";
-import VoiceTranscriberAutoStop, { VoiceTranscriberRef } from "@/components/VoiceTranscriberAutoStop";
+// import VoiceTranscriberAutoStop, { VoiceTranscriberRef } from "@/components/VoiceTranscriberAutoStop";
 
 function StickyToBottomContent(props: {
   content: ReactNode;
@@ -96,6 +98,7 @@ export function Thread() {
   const {
     messagesVoicesAi,
     messagesVoicesUser,
+    addMessageUser,
     startRecording,
     stopRecording,
     transcription,
@@ -103,7 +106,7 @@ export function Thread() {
     messagesConversation,
   } = useVoiceChat();
 
-   const transcriberRef = useRef<VoiceTranscriberRef>(null);
+  //  const transcriberRef = useRef<VoiceTranscriberRef>(null);
 
   // const [hideToolCalls, setHideToolCalls] = useQueryState(
   //   "hideToolCalls",
@@ -118,56 +121,57 @@ export function Thread() {
   const isLargeScreen = useMediaQuery("(min-width: 1024px)");
   const firstMessageRef = useRef(0);
   const stream = useStreamContext();
-
+  const [messageQueue, setMessageQueue] = useState<string[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
   // En esta funcion recibo un blob para reproducir el audio
 
-  const synthesize = async (text: string) => {
-    const res = await fetch("/api/speak", {
-      method: "POST",
-      body: JSON.stringify({
-        text,
-        voiceID: "h2cd3gvcqTp3m65Dysk7", // ID de voz de Carla
-      }),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+  // const synthesize = async (text: string) => {
+  //   const res = await fetch("/api/speak", {
+  //     method: "POST",
+  //     body: JSON.stringify({
+  //       text,
+  //       voiceID: "h2cd3gvcqTp3m65Dysk7", // ID de voz de Carla
+  //     }),
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //     },
+  //   });
 
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    audio.addEventListener("ended", () => {
-    console.log("✅ Audio terminado");
-    // setStartRecording(true)
-    // Aquí podés hacer algo cuando termine, como habilitar un botón, pasar al siguiente texto, etc.
-  });
+  //   const blob = await res.blob();
+  //   const url = URL.createObjectURL(blob);
+  //   const audio = new Audio(url);
+  //   audio.addEventListener("ended", () => {
+  //   console.log("✅ Audio terminado");
+  //   // setStartRecording(true)
+  //   // Aquí podés hacer algo cuando termine, como habilitar un botón, pasar al siguiente texto, etc.
+  // });
 
-    audio.play();
-  };
+  //   audio.play();
+  // };
 
   console.log("message conversation: ", messagesConversation);
 
-  const handleTranscription = async (text: string) => {
-    console.log("📝 Transcripción:", text);
+  // const handleTranscription = async (text: string) => {
+  //   console.log("📝 Transcripción:", text);
 
-    // enviar texto al backend para sintetizar
-    const res = await fetch("/api/speak", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, voiceID: "h2cd3gvcqTp3m65Dysk7" }),
-    });
+  //   // enviar texto al backend para sintetizar
+  //   const res = await fetch("/api/speak", {
+  //     method: "POST",
+  //     headers: { "Content-Type": "application/json" },
+  //     body: JSON.stringify({ text, voiceID: "h2cd3gvcqTp3m65Dysk7" }),
+  //   });
 
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
+  //   const blob = await res.blob();
+  //   const url = URL.createObjectURL(blob);
+  //   const audio = new Audio(url);
 
-    audio.addEventListener("ended", () => {
-      console.log("🎧 Audio terminado, volviendo a escuchar...");
-      transcriberRef.current?.start();
-    });
+  //   // audio.addEventListener("ended", () => {
+  //   //   console.log("🎧 Audio terminado, volviendo a escuchar...");
+  //   //   transcriberRef.current?.start();
+  //   // });
 
-    audio.play();
-  };
+  //   audio.play();
+  // };
   
 
   // Manejar los mensajes de voz
@@ -188,7 +192,7 @@ export function Thread() {
   //Manejar el envio de los mensajes de voz
   const handleSubmitVoicesMessages = (text: string) => {
     setFirstTokenReceived(false);
-
+     setMessageQueue((q) => [...q, text]);
     const newHumanMessage: Message = {
       id: uuidv4(),
       type: "human",
@@ -214,32 +218,76 @@ export function Thread() {
     );
   };
 
+// Tomo la cola de mensajes y los proceso uno a uno enviandoselos a mi backend donde est el agente
+//   useEffect(() => {
+//   if (isProcessing || messageQueue.length === 0) return;
+
+//   const processMessage = async () => {
+//     setIsProcessing(true);
+//     const next = messageQueue[0];
+//     console.log("Procesando mensaje: ", next);
+//     try {
+//     const newHumanMessage: Message = {
+//       id: uuidv4(),
+//       type: "human",
+//       content: next,
+//     };
+
+//     const toolMessages = ensureToolCallsHaveResponses(stream.messages);
+//     stream.submit(
+//       { messages: [...toolMessages, newHumanMessage] },
+
+//       {
+//         config: { configurable: { user_id: 77, reference: reference } },
+//         streamMode: ["values"],
+//         optimisticValues: (prev) => ({
+//           ...prev,
+//           messages: [
+//             ...(prev.messages ?? []),
+//             ...toolMessages,
+//             newHumanMessage,
+//           ],
+//         }),
+//       },
+//     );
+//     } catch (err) {
+//       console.error("Error al enviar al agente:", err);
+//     } finally {
+//       // Elimina el mensaje procesado y continúa
+//       setMessageQueue((q) => q.slice(1));
+//       setIsProcessing(false);
+//     }
+//   };
+
+//   processMessage();
+// }, [messageQueue, isProcessing]);
+
   // Enviamos el mensaje de voz del usuario
-  useEffect(() => {
-    console.log("Mensajes de voz del usuario: ", messagesVoicesUser);
+  // useEffect(() => {
+  //   console.log("Mensajes de voz del usuario: ", messagesVoicesUser);
 
-    if (messagesVoicesUser.length === 0) return;
+  //   if (messagesVoicesUser.length === 0) return;
 
-    const lastMessage = messagesVoicesUser[messagesVoicesUser.length - 1];
-    if (lastMessage.text.trim() === "") return;
-    // setInput(lastMessage.text);
-    console.log(
-      "Ultimo mensaje de voz del usuario y enviado: ",
-      lastMessage.text,
-    );
+  //   const lastMessage = messagesVoicesUser[messagesVoicesUser.length - 1];
+  //   if (lastMessage.text.trim() === "") return;
+  //   // setInput(lastMessage.text);
+  //   console.log(
+  //     "Ultimo mensaje de voz del usuario y enviado: ",
+  //     lastMessage.text,
+  //   );
 
-    handleSubmitVoicesMessages(lastMessage.text);
-  }, [messagesVoicesUser]);
+  //   handleSubmitVoicesMessages(lastMessage.text);
+  // }, [messagesVoicesUser]);
 
   // Enviamos la transcripttion del audio
 
-  useEffect(() => {
-    console.log("Transcripción del audio: ", transcription);
+  // useEffect(() => {
+  //   console.log("Transcripción del audio: ", transcription);
 
-    if (!transcription || transcription.trim() === "") return;
+  //   if (!transcription || transcription.trim() === "") return;
 
-    // handleSubmitVoicesMessages(transcription);
-  }, [transcription]);
+  //   // handleSubmitVoicesMessages(transcription);
+  // }, [transcription]);
 
   const messages = stream.messages;
   console.log("messages del stream.messages: ", messages);
@@ -268,32 +316,35 @@ export function Thread() {
     const timer = setTimeout(() => {
       if (firstMessageRef.current !== 0) return;
       if (threadId) return;
+       const newHumanMessage: Message = {
+      id: uuidv4(),
+      type: "human",
+      content: "Hola!",
+    };
 
-      const newHumanMessage: Message = {
-        id: `do-not-render-${uuidv4()}`,
-        type: "human",
-        content: "hola",
-      };
+    const toolMessages = ensureToolCallsHaveResponses(stream.messages);
+    stream.submit(
+      { messages: [...toolMessages, newHumanMessage] },
 
-      const toolMessages = ensureToolCallsHaveResponses(stream.messages);
-      stream.submit(
-        { messages: [...toolMessages, newHumanMessage] },
-        {
-          config: { configurable: { user_id: uuidv4(), api_key: "123" } },
-          streamMode: ["values"],
-          optimisticValues: (prev) => ({
-            ...prev,
-            messages: [
-              ...(prev.messages ?? []),
-              ...toolMessages,
-              newHumanMessage,
-            ],
-          }),
-        },
-      );
+      {
+        config: { configurable: { user_id: 77, reference: reference } },
+        streamMode: ["values"],
+        optimisticValues: (prev) => ({
+          ...prev,
+          messages: [
+            ...(prev.messages ?? []),
+            ...toolMessages,
+            newHumanMessage,
+          ],
+        }),
+      },
+    );
+  
+
+   
       firstMessageRef.current = 1;
       // setInput("");
-      // setShowinputField(true);
+      setShowinputField(true);
     }, 1000); // Espera de 1 segundo
 
     return () => clearTimeout(timer); // Limpieza del temporizador al desmontar
@@ -332,30 +383,30 @@ export function Thread() {
   const prevMessageLength = useRef(0);
   const playMessageAudio = useRef(true);
 
-  // useEffect(() => {
-  //   if (
-  //     messages.length !== prevMessageLength.current &&
-  //     messages?.length &&
-  //     messages[messages.length - 1].type === "ai"
-  //   ) {
-  //     setFirstTokenReceived(true);
-  //   }
-  //   if (prevMessageLength.current === messages.length) return;
-  //   if (
-  //     messages.length &&
-  //     messages[messages.length - 1].type === "ai" &&
-  //     playMessageAudio.current
-  //   ) {
-  //     const lastMessage = messages[messages.length - 1]
-  //     if(lastMessage.type !== "ai") return;
-  //     handleTranscription(messages[messages.length - 1].content as string);
-  //     // streamTextSpeech(messages[messages.length - 1].content as string);
+  useEffect(() => {
+    if (
+      messages.length !== prevMessageLength.current &&
+      messages?.length &&
+      messages[messages.length - 1].type === "ai"
+    ) {
+      setFirstTokenReceived(true);
+    }
+    if (prevMessageLength.current === messages.length) return;
+    if (
+      messages.length &&
+      messages[messages.length - 1].type === "ai" &&
+      playMessageAudio.current
+    ) {
+      const lastMessage = messages[messages.length - 1]
+      if(lastMessage.type === "tool") return;
+      // handleTranscription(messages[messages.length - 1].content as string);
+      // streamTextSpeech(messages[messages.length - 1].content as string);
       
-  //     // playMessageAudio.current = false; // Evita reproducir el audio de mensajes anteriores
-  //   }
+      // playMessageAudio.current = false; // Evita reproducir el audio de mensajes anteriores
+    }
 
-  //   prevMessageLength.current = messages.length;
-  // }, [messages]);
+    prevMessageLength.current = messages.length;
+  }, [messages]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -602,14 +653,15 @@ export function Thread() {
                       // Aquí podrías manejar los mensajes de herramientas
                       // Por ejemplo, si tienes un componente específico para herramientas:
                       return (
-                        <ToolMessageProp
-                          key={key}
-                          propiedades={
-                          JSON.parse(message.content)
-                          }
-                          isLoading={isLoading}
-                          handleRegenerate={handleRegenerate}
-                        />
+                        <></>
+                        // <ToolMessageProp
+                        //   key={key}
+                        //   propiedades={
+                        //   JSON.parse(message.content)
+                        //   }
+                        //   isLoading={isLoading}
+                        //   handleRegenerate={handleRegenerate}
+                        // />
                       );
                     }
 
@@ -644,14 +696,29 @@ export function Thread() {
             //             message={message}
             //             isLoading={isLoading}
             //           />
-            //         ) : (
+            //         ) : message.type === "ai" ? (
             //           <AssistantMessage
             //             key={message.id || `${message.type}-${index}`}
             //             message={message}
             //             isLoading={isLoading}
             //             handleRegenerate={handleRegenerate}
             //           />
-            //         ),
+            //         ) : message.type === "tool" && (
+                       
+            //           // Aquí podrías manejar los mensajes de herramientas
+            //           // Por ejemplo, si tienes un componente específico para herramientas:
+                      
+            //             <ToolMessageProp
+            //               key={message.id || `${message.type}-${index}`}
+            //               propiedades={
+            //               JSON.parse(message.content as string)
+            //               }
+                          
+                          
+            //             />
+            //           )
+                  
+                    
             //       )}
             //     {/* Special rendering case where there are no AI/tool messages, but there is an interrupt.
             //         We need to render it outside of the messages list, since there are no messages to render */}
@@ -723,6 +790,7 @@ export function Thread() {
                     <VoiceChat />
                    {/* <VoiceTranscriberAutoStop ref={transcriberRef} onTranscription={handleSubmitVoicesMessages} /> */}
 
+                  {/* <VoiceTranscriberContinued ref={transcriberRef} onTranscription={handleSubmitVoicesMessages}/> */}
                     
 
                     {/* <VoiceTranscriber onRecording={startRecording} isRecording={recording} stopRecording={stopRecording}/> */}

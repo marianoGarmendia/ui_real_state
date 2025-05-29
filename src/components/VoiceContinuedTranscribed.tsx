@@ -1,112 +1,114 @@
 "use client";
 
-import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
+import { useEffect, useRef, useImperativeHandle, useState, forwardRef } from "react";
 
 export type VoiceTranscriberRef = {
   start: () => void;
   stop: () => void;
 };
 
-const VoiceTranscriberAutoStop = forwardRef(function VoiceTranscriber(
+const VoiceTranscriberContinued = forwardRef(function VoiceTranscriberAutoStop(
   { onTranscription }: { onTranscription: (text: string) => void },
   ref: React.Ref<VoiceTranscriberRef>
 ) {
   const [recording, setRecording] = useState(false);
 
   const streamRef = useRef<MediaStream | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const silenceStartRef = useRef<number | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const silenceStartRef = useRef<number | null>(null);
-  const isMonitoringRef = useRef(false);
 
-  const THRESHOLD = 3; // sensibilidad de activación
-  const SILENCE_TIMEOUT = 2500;
+  const soundThreshold = 0.5; // umbral de sonido para activar la grabación
+  const silenceTimeoutMs = 3000;
+
+ 
 
   useImperativeHandle(ref, () => ({
-    start: initMicrophone,
+    start: initMicrophoneMonitoring,
     stop: cleanup,
   }));
 
-  const initMicrophone = async () => {
-    if (isMonitoringRef.current) return;
-
+  const initMicrophoneMonitoring = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const context = new AudioContext();
-    const source = context.createMediaStreamSource(stream);
-    const analyser = context.createAnalyser();
+    streamRef.current = stream;
+    console.log("Micrófono activado");
+    
+    const audioContext = new AudioContext();
+    const source = audioContext.createMediaStreamSource(stream);
+    const analyser = audioContext.createAnalyser();
     analyser.fftSize = 256;
 
     source.connect(analyser);
 
-    streamRef.current = stream;
-    audioContextRef.current = context;
+    audioContextRef.current = audioContext;
+    sourceRef.current = source;
     analyserRef.current = analyser;
-    isMonitoringRef.current = true;
 
-    monitor();
+    monitorAudio(); // comienza el bucle de escucha
   };
 
-  const monitor = () => {
+  const monitorAudio = () => {
+    console.log("Monitoreando audio...");
+    
     const analyser = analyserRef.current;
     if (!analyser) return;
 
-    const data = new Uint8Array(analyser.fftSize);
-    analyser.getByteTimeDomainData(data);
+    const dataArray = new Uint8Array(analyser.fftSize);
+    analyser.getByteTimeDomainData(dataArray);
 
     const rms = Math.sqrt(
-      data.reduce((sum, val) => sum + (val - 128) ** 2, 0) / data.length
+      dataArray.reduce((acc, val) => acc + (val - 128) ** 2, 0) / dataArray.length
     );
-
+     console.log("RMS:", rms.toFixed(2));
     const now = Date.now();
 
-    if (rms > THRESHOLD) {
+    if (rms > soundThreshold) {
       silenceStartRef.current = null;
       if (!recording) startRecording();
     } else if (recording) {
       if (silenceStartRef.current === null) {
         silenceStartRef.current = now;
-      } else if (now - silenceStartRef.current > SILENCE_TIMEOUT) {
+      } else if (now - silenceStartRef.current > silenceTimeoutMs) {
         stopRecording();
       }
     }
 
-    if (isMonitoringRef.current) {
-      requestAnimationFrame(monitor);
-    }
+    requestAnimationFrame(monitorAudio);
   };
 
   const startRecording = () => {
     const stream = streamRef.current;
     if (!stream) return;
 
-    const recorder = new MediaRecorder(stream);
+    const mediaRecorder = new MediaRecorder(stream);
+    mediaRecorderRef.current = mediaRecorder;
     audioChunksRef.current = [];
-    mediaRecorderRef.current = recorder;
 
-    recorder.ondataavailable = (e) => {
+    mediaRecorder.ondataavailable = (e) => {
       if (e.data.size > 0) audioChunksRef.current.push(e.data);
     };
 
-    recorder.onstop = async () => {
+    mediaRecorder.onstop = async () => {
       const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-      const form = new FormData();
-      form.append("file", blob, "audio.webm");
+      const formData = new FormData();
+      formData.append("file", blob, "audio.webm");
 
       try {
         const res = await fetch("/api/transcribe", {
           method: "POST",
-          body: form,
+          body: formData,
         });
         const data = await res.json();
         onTranscription(data.text || "[sin texto]");
       } catch (err) {
-        console.error("Transcripción fallida:", err);
+        console.error("Error al transcribir:", err);
       }
     };
 
-    recorder.start();
+    mediaRecorder.start();
     setRecording(true);
   };
 
@@ -121,28 +123,23 @@ const VoiceTranscriberAutoStop = forwardRef(function VoiceTranscriber(
     streamRef.current?.getTracks().forEach((t) => t.stop());
     audioContextRef.current?.close();
 
-    isMonitoringRef.current = false;
-    analyserRef.current = null;
-    audioContextRef.current = null;
     streamRef.current = null;
-    mediaRecorderRef.current = null;
+    audioContextRef.current = null;
+    analyserRef.current = null;
+    sourceRef.current = null;
     silenceStartRef.current = null;
   };
 
-  useEffect(() => {
-    return () => cleanup();
-  }, []);
-
-  return (
+   return (
     <div className="flex justify-center items-center mt-4">
       <div
-        className={`w-6 h-6 rounded-full transition-all ${
-          recording ? "bg-red-500 animate-pulse" : "bg-gray-400"
+        className={`w-10 h-10 rounded-full ${
+          recording ? "bg-red-500 animate-ping-slow" : "bg-gray-400"
         }`}
-        title={recording ? "Grabando..." : "Esperando voz"}
+        title={recording ? "Grabando..." : "Inactivo"}
       />
     </div>
   );
 });
 
-export default VoiceTranscriberAutoStop;
+export default VoiceTranscriberContinued;

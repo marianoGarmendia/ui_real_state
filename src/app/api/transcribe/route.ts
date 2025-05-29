@@ -26,7 +26,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       text: response.text,
       language: "spa",
-     
       words: response.words,
     });
   } catch (error) {
