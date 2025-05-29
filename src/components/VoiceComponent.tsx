@@ -127,6 +127,7 @@ const VoiceChat = () => {
   };
 
   useEffect(() => {
+
     if(status === "disconnected") {
       handleStartConversation();
     }
@@ -137,7 +138,7 @@ const VoiceChat = () => {
     }
    
   
-  }, [status]);
+  },[status]);
 
 
 

@@ -121,8 +121,8 @@ export function Thread() {
   const isLargeScreen = useMediaQuery("(min-width: 1024px)");
   const firstMessageRef = useRef(0);
   const stream = useStreamContext();
-  const [messageQueue, setMessageQueue] = useState<string[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
+  // const [messageQueue, setMessageQueue] = useState<string[]>([]);
+  // const [isProcessing, setIsProcessing] = useState(false);
   // En esta funcion recibo un blob para reproducir el audio
 
   // const synthesize = async (text: string) => {
@@ -190,13 +190,16 @@ export function Thread() {
   // },[messagesVoices]);
 
   //Manejar el envio de los mensajes de voz
-  const handleSubmitVoicesMessages = (text: string) => {
+  
+  useEffect(() => {
+    if(messagesVoicesUser.length === 0) return;
+   
     setFirstTokenReceived(false);
-     setMessageQueue((q) => [...q, text]);
+    //  setMessageQueue((q) => [...q, text]);
     const newHumanMessage: Message = {
       id: uuidv4(),
       type: "human",
-      content: text,
+      content: messagesVoicesUser[messagesVoicesUser.length - 1].text,
     };
 
     const toolMessages = ensureToolCallsHaveResponses(stream.messages);
@@ -216,12 +219,10 @@ export function Thread() {
         }),
       },
     );
-  };
+  
 
-  useEffect(() => {
-    if(messagesVoicesUser.length === 0) return;
-    handleSubmitVoicesMessages(messagesVoicesUser[messagesVoicesUser.length - 1].text);
-  },[messagesVoicesUser])
+    
+  },[messagesVoicesUser, reference])
 
 
 // Tomo la cola de mensajes y los proceso uno a uno enviandoselos a mi backend donde est el agente
@@ -354,7 +355,7 @@ export function Thread() {
     }, 1000); // Espera de 1 segundo
 
     return () => clearTimeout(timer); // Limpieza del temporizador al desmontar
-  }, [firstMessageRef, stream, threadId]);
+  }, [firstMessageRef, threadId]);
 
 
   useEffect(() => {
@@ -414,37 +415,37 @@ export function Thread() {
     prevMessageLength.current = messages.length;
   }, [messages]);
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
-    setFirstTokenReceived(false);
+  // const handleSubmit = (e: FormEvent) => {
+  //   e.preventDefault();
+  //   if (!input.trim() || isLoading) return;
+  //   setFirstTokenReceived(false);
 
-    const newHumanMessage: Message = {
-      id: uuidv4(),
-      type: "human",
-      content: input,
-    };
+  //   const newHumanMessage: Message = {
+  //     id: uuidv4(),
+  //     type: "human",
+  //     content: input,
+  //   };
 
-    const toolMessages = ensureToolCallsHaveResponses(stream.messages);
-    stream.submit(
-      { messages: [...toolMessages, newHumanMessage] },
+  //   const toolMessages = ensureToolCallsHaveResponses(stream.messages);
+  //   stream.submit(
+  //     { messages: [...toolMessages, newHumanMessage] },
 
-      {
-        config: { configurable: { user_id: 77, reference: reference } },
-        streamMode: ["values"],
-        optimisticValues: (prev) => ({
-          ...prev,
-          messages: [
-            ...(prev.messages ?? []),
-            ...toolMessages,
-            newHumanMessage,
-          ],
-        }),
-      },
-    );
+  //     {
+  //       config: { configurable: { user_id: 77, reference: reference } },
+  //       streamMode: ["values"],
+  //       optimisticValues: (prev) => ({
+  //         ...prev,
+  //         messages: [
+  //           ...(prev.messages ?? []),
+  //           ...toolMessages,
+  //           newHumanMessage,
+  //         ],
+  //       }),
+  //     },
+  //   );
 
-    setInput("");
-  };
+  //   setInput("");
+  // };
 
   const handleRegenerate = (
     parentCheckpoint: Checkpoint | null | undefined,
