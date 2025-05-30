@@ -22,6 +22,14 @@ const VoiceChat = () => {
   const [isMuted, setIsMuted] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const { addMessageUser, addMessageAi, setMessagesConversation } = useVoiceChat();
+
+  const handleRenewalConersation = async () => {
+    const conversationId = await handleStartConversation();
+    if(conversationId) {
+      conversation.sendUserMessage("Al perecer se cortó la conexión, retomemos la conversacion desde el ultimo mensaje")
+    }
+    
+  }
   
  
 
@@ -33,7 +41,7 @@ const VoiceChat = () => {
     },
     onDisconnect: () => {
       console.log("Disconnected from ElevenLabs");
-      handleStartConversation()
+      handleRenewalConersation();
     },
     onMessage: (message) => {
       console.log("Received message:", message);
@@ -101,6 +109,7 @@ const VoiceChat = () => {
    
       });
       console.log("Started conversation:", conversationId);
+      return conversationId;
     } catch (error) {
       setErrorMessage("Failed to start conversation");
       console.error("Error starting conversation:", error);

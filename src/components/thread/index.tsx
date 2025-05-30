@@ -1,11 +1,11 @@
 "use client";
 
 import { v4 as uuidv4 } from "uuid";
-import { ReactNode, use, useEffect, useRef } from "react";
-import { m, motion } from "framer-motion";
+import { ReactNode, useEffect, useRef } from "react";
+import {  motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useStreamContext } from "@/providers/Stream";
-import { useState, FormEvent } from "react";
+import { useState } from "react";
 import { Button } from "../ui/button";
 import { Checkpoint, Message } from "@langchain/langgraph-sdk";
 import VoiceChat from "../VoiceComponent";
@@ -23,8 +23,6 @@ import {
   ensureToolCallsHaveResponses,
 } from "@/lib/ensure-tool-responses";
 
-
-
 import Image from "next/image";
 import { ArrowDown, LoaderCircle } from "lucide-react";
 import { useQueryState, parseAsBoolean } from "nuqs";
@@ -32,10 +30,8 @@ import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import ThreadHistory from "./history";
 import { toast } from "sonner";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import {streamTextSpeech} from '@/components/eleven-stream'
 import WhatsappAhare from "../icons/whatsapp";
-import VoiceTranscriber  from "../AudioRecorder";
-import ToolMessageProp from "@/components/ToolMessageProp"
+
 
 // import naturgy_logo from "../../../assets/naturgy_logo_text-removebg.png";
 // import naturgy_logo_chat from "../../../assets/naturgy.png";
@@ -86,8 +82,6 @@ function ScrollToBottom(props: { className?: string }) {
   );
 }
 
-
-
 export function Thread() {
   const [threadId] = useQueryState("threadId");
   const [chatHistoryOpen] = useQueryState(
@@ -96,13 +90,8 @@ export function Thread() {
   );
   const [reference] = useQueryState("reference");
   const {
-    messagesVoicesAi,
     messagesVoicesUser,
-    addMessageUser,
-    startRecording,
-    stopRecording,
-    transcription,
-    recording,
+
     messagesConversation,
   } = useVoiceChat();
 
@@ -115,8 +104,6 @@ export function Thread() {
   const [showinputField, setShowinputField] = useState(false);
   const [hideToolCalls, setHideToolCalls] = useState(true);
 
-  
-  const [input, setInput] = useState("");
   const [firstTokenReceived, setFirstTokenReceived] = useState(false);
   const isLargeScreen = useMediaQuery("(min-width: 1024px)");
   const firstMessageRef = useRef(0);
@@ -172,7 +159,6 @@ export function Thread() {
 
   //   audio.play();
   // };
-  
 
   // Manejar los mensajes de voz
   // useEffect(() => {
@@ -190,10 +176,10 @@ export function Thread() {
   // },[messagesVoices]);
 
   //Manejar el envio de los mensajes de voz
-  
+
   useEffect(() => {
-    if(messagesVoicesUser.length === 0) return;
-   
+    if (messagesVoicesUser.length === 0) return;
+
     setFirstTokenReceived(false);
     //  setMessageQueue((q) => [...q, text]);
     const newHumanMessage: Message = {
@@ -219,55 +205,51 @@ export function Thread() {
         }),
       },
     );
-  
+  }, [messagesVoicesUser, reference]);
 
-    
-  },[messagesVoicesUser, reference])
+  // Tomo la cola de mensajes y los proceso uno a uno enviandoselos a mi backend donde est el agente
+  //   useEffect(() => {
+  //   if (isProcessing || messageQueue.length === 0) return;
 
+  //   const processMessage = async () => {
+  //     setIsProcessing(true);
+  //     const next = messageQueue[0];
+  //     console.log("Procesando mensaje: ", next);
+  //     try {
+  //     const newHumanMessage: Message = {
+  //       id: uuidv4(),
+  //       type: "human",
+  //       content: next,
+  //     };
 
-// Tomo la cola de mensajes y los proceso uno a uno enviandoselos a mi backend donde est el agente
-//   useEffect(() => {
-//   if (isProcessing || messageQueue.length === 0) return;
+  //     const toolMessages = ensureToolCallsHaveResponses(stream.messages);
+  //     stream.submit(
+  //       { messages: [...toolMessages, newHumanMessage] },
 
-//   const processMessage = async () => {
-//     setIsProcessing(true);
-//     const next = messageQueue[0];
-//     console.log("Procesando mensaje: ", next);
-//     try {
-//     const newHumanMessage: Message = {
-//       id: uuidv4(),
-//       type: "human",
-//       content: next,
-//     };
+  //       {
+  //         config: { configurable: { user_id: 77, reference: reference } },
+  //         streamMode: ["values"],
+  //         optimisticValues: (prev) => ({
+  //           ...prev,
+  //           messages: [
+  //             ...(prev.messages ?? []),
+  //             ...toolMessages,
+  //             newHumanMessage,
+  //           ],
+  //         }),
+  //       },
+  //     );
+  //     } catch (err) {
+  //       console.error("Error al enviar al agente:", err);
+  //     } finally {
+  //       // Elimina el mensaje procesado y continúa
+  //       setMessageQueue((q) => q.slice(1));
+  //       setIsProcessing(false);
+  //     }
+  //   };
 
-//     const toolMessages = ensureToolCallsHaveResponses(stream.messages);
-//     stream.submit(
-//       { messages: [...toolMessages, newHumanMessage] },
-
-//       {
-//         config: { configurable: { user_id: 77, reference: reference } },
-//         streamMode: ["values"],
-//         optimisticValues: (prev) => ({
-//           ...prev,
-//           messages: [
-//             ...(prev.messages ?? []),
-//             ...toolMessages,
-//             newHumanMessage,
-//           ],
-//         }),
-//       },
-//     );
-//     } catch (err) {
-//       console.error("Error al enviar al agente:", err);
-//     } finally {
-//       // Elimina el mensaje procesado y continúa
-//       setMessageQueue((q) => q.slice(1));
-//       setIsProcessing(false);
-//     }
-//   };
-
-//   processMessage();
-// }, [messageQueue, isProcessing]);
+  //   processMessage();
+  // }, [messageQueue, isProcessing]);
 
   // Enviamos el mensaje de voz del usuario
   // useEffect(() => {
@@ -308,13 +290,11 @@ export function Thread() {
   //   }
   // }, [messages]);
 
-
   const isLoading = stream.isLoading;
 
   const lastError = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    // console.log("hide tool calls", hideToolCalls);
 
     setHideToolCalls(true);
   }, [hideToolCalls, setHideToolCalls]);
@@ -323,32 +303,30 @@ export function Thread() {
     const timer = setTimeout(() => {
       if (firstMessageRef.current !== 0) return;
       if (threadId) return;
-       const newHumanMessage: Message = {
-      id: uuidv4(),
-      type: "human",
-      content: "Hola!",
-    };
+      const newHumanMessage: Message = {
+        id: uuidv4(),
+        type: "human",
+        content: "Hola!",
+      };
 
-    const toolMessages = ensureToolCallsHaveResponses(stream.messages);
-    stream.submit(
-      { messages: [...toolMessages, newHumanMessage] },
+      const toolMessages = ensureToolCallsHaveResponses(stream.messages);
+      stream.submit(
+        { messages: [...toolMessages, newHumanMessage] },
 
-      {
-        config: { configurable: { user_id: 77, reference: reference } },
-        streamMode: ["values"],
-        optimisticValues: (prev) => ({
-          ...prev,
-          messages: [
-            ...(prev.messages ?? []),
-            ...toolMessages,
-            newHumanMessage,
-          ],
-        }),
-      },
-    );
-  
+        {
+          config: { configurable: { user_id: 77, reference: reference } },
+          streamMode: ["values"],
+          optimisticValues: (prev) => ({
+            ...prev,
+            messages: [
+              ...(prev.messages ?? []),
+              ...toolMessages,
+              newHumanMessage,
+            ],
+          }),
+        },
+      );
 
-   
       firstMessageRef.current = 1;
       // setInput("");
       setShowinputField(true);
@@ -356,7 +334,6 @@ export function Thread() {
 
     return () => clearTimeout(timer); // Limpieza del temporizador al desmontar
   }, [firstMessageRef, threadId]);
-
 
   useEffect(() => {
     if (!stream.error) {
@@ -404,11 +381,11 @@ export function Thread() {
       messages[messages.length - 1].type === "ai" &&
       playMessageAudio.current
     ) {
-      const lastMessage = messages[messages.length - 1]
-      if(lastMessage.type === "tool") return;
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.type === "tool") return;
       // handleTranscription(messages[messages.length - 1].content as string);
       // streamTextSpeech(messages[messages.length - 1].content as string);
-      
+
       // playMessageAudio.current = false; // Evita reproducir el audio de mensajes anteriores
     }
 
@@ -569,7 +546,7 @@ export function Thread() {
               <span className="text-xl font-semibold tracking-tight">
                 <Image
                   src={win_logo}
-                  alt="Naturgy Logo"
+                  alt="Win logo"
                   width={100}
                   height={100}
                   className="mx-2"
@@ -631,7 +608,6 @@ export function Thread() {
                             type: message.source === "user" ? "human" : "ai",
                             additional_kwargs: {},
                             response_metadata: {},
-                           
                           }}
                           isLoading={isLoading}
                         />
@@ -648,7 +624,6 @@ export function Thread() {
                             type: message.source === "user" ? "human" : "ai",
                             additional_kwargs: {},
                             response_metadata: {},
-                           
                           }}
                           isLoading={isLoading}
                           handleRegenerate={handleRegenerate}
@@ -711,21 +686,19 @@ export function Thread() {
             //             handleRegenerate={handleRegenerate}
             //           />
             //         ) : message.type === "tool" && (
-                       
+
             //           // Aquí podrías manejar los mensajes de herramientas
             //           // Por ejemplo, si tienes un componente específico para herramientas:
-                      
+
             //             <ToolMessageProp
             //               key={message.id || `${message.type}-${index}`}
             //               propiedades={
             //               JSON.parse(message.content as string)
             //               }
-                          
-                          
+
             //             />
             //           )
-                  
-                    
+
             //       )}
             //     {/* Special rendering case where there are no AI/tool messages, but there is an interrupt.
             //         We need to render it outside of the messages list, since there are no messages to render */}
@@ -795,10 +768,9 @@ export function Thread() {
                 ) : (
                   <div className="bg-muted relative z-10 mx-auto mb-8 w-full max-w-3xl rounded-2xl border shadow-xs">
                     <VoiceChat />
-                   {/* <VoiceTranscriberAutoStop ref={transcriberRef} onTranscription={handleSubmitVoicesMessages} /> */}
+                    {/* <VoiceTranscriberAutoStop ref={transcriberRef} onTranscription={handleSubmitVoicesMessages} /> */}
 
-                  {/* <VoiceTranscriberContinued ref={transcriberRef} onTranscription={handleSubmitVoicesMessages}/> */}
-                    
+                    {/* <VoiceTranscriberContinued ref={transcriberRef} onTranscription={handleSubmitVoicesMessages}/> */}
 
                     {/* <VoiceTranscriber onRecording={startRecording} isRecording={recording} stopRecording={stopRecording}/> */}
 
