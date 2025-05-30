@@ -12,6 +12,7 @@ import { useConversation } from "@11labs/react";
 // UI
 // import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+
 // import { Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 // import { stat } from "fs";
 // import { add } from "lodash";
@@ -33,12 +34,12 @@ const VoiceChat = () => {
   
  console.log("errorMessage: ", errorMessage);
  console.log("hasPermission: ", hasPermission);
- 
- 
+
 
   const conversation = useConversation({
     onConnect: () => {
       console.log("Connected to ElevenLabs");
+      handleStartConversation();
 
         
     },
@@ -83,7 +84,11 @@ const VoiceChat = () => {
     
   });
 
-  const { status, isSpeaking } = conversation;
+  const { isSpeaking } = conversation;
+
+
+   
+ 
 
 
 
@@ -138,36 +143,20 @@ const VoiceChat = () => {
   //   }
   // };
 
-  useEffect(() => {
+  // useEffect(() => {
 
-    if(status === "disconnected") {
-       const handleStartConversation= async () => {
-    try {
-      // Replace with your actual agent ID or URL
-      const conversationId = await conversation.startSession({
-        agentId: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID!,
-        
-
-   
-      });
-      console.log("Started conversation:", conversationId);
-      return conversationId;
-    } catch (error) {
-      setErrorMessage("Failed to start conversation");
-      console.error("Error starting conversation:", error);
-    }
-
-  };
-  handleStartConversation()
-    }
-    if(status === "connected") {
-      console.log("snd first message");
-
-      conversation.sendUserMessage("Hola!")
-    }
+  //   if(status === "disconnected") {
+      
+  // };
+  // handleStartConversation()
+  //   }
+  //   if(status === "connected") {
+  //     console.log("snd first message");
+      
+  //   }
    
   
-  },[status, conversation]);
+  // },[status]);
 
 
 
@@ -219,6 +208,9 @@ const VoiceChat = () => {
 
         
      <div className="relative w-32 h-32 flex items-center justify-center">
+        <p className="text-green-600">
+                {isSpeaking ? "Carla está hablando..." : "Escuchando o procesando..."}
+        </p>
       {isSpeaking && (
         <span className="absolute w-full h-full rounded-full bg-red-500 animate-ping-smooth" />
       )}
