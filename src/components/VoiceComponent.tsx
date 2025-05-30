@@ -7,20 +7,20 @@ import React, { useEffect, useState } from "react";
 import {useVoiceChat} from "@/contexts/VoiceChatContexts";
 
 // ElevenLabs
-import { useConversation , Mode, postOverallFeedback,  SessionConfig} from "@11labs/react";
+import { useConversation } from "@11labs/react";
 
 // UI
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mic, MicOff, Volume2, VolumeX } from "lucide-react";
-import { stat } from "fs";
-import { add } from "lodash";
+// import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+// import { Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+// import { stat } from "fs";
+// import { add } from "lodash";
 
 
 const VoiceChat = () => {
-  const [hasPermission, setHasPermission] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [hasPermission,  setHasPermission] = useState(false);
+  // const [isMuted, setIsMuted] = useState(true);
+  const [  errorMessage,  setErrorMessage] = useState("");
   const { addMessageUser, addMessageAi, setMessagesConversation } = useVoiceChat();
 
   const handleRenewalConersation = async () => {
@@ -31,6 +31,9 @@ const VoiceChat = () => {
     
   }
   
+ console.log("errorMessage: ", errorMessage);
+ console.log("hasPermission: ", hasPermission);
+ 
  
 
   const conversation = useConversation({
@@ -116,24 +119,24 @@ const VoiceChat = () => {
     }
   };
 
-  const handleEndConversation = async () => {
-    try {
-      await conversation.endSession();
-    } catch (error) {
-      setErrorMessage("Failed to end conversation");
-      console.error("Error ending conversation:", error);
-    }
-  };
+  // const handleEndConversation = async () => {
+  //   try {
+  //     await conversation.endSession();
+  //   } catch (error) {
+  //     setErrorMessage("Failed to end conversation");
+  //     console.error("Error ending conversation:", error);
+  //   }
+  // };
 
-  const toggleMute = async () => {
-    try {
-       conversation.setVolume({ volume: isMuted ? 1 : 0 });
-      setIsMuted(!isMuted);
-    } catch (error) {
-      setErrorMessage("Failed to change volume");
-      console.error("Error changing volume:", error);
-    }
-  };
+  // const toggleMute = async () => {
+  //   try {
+  //      conversation.setVolume({ volume: isMuted ? 1 : 0 });
+  //     setIsMuted(!isMuted);
+  //   } catch (error) {
+  //     setErrorMessage("Failed to change volume");
+  //     console.error("Error changing volume:", error);
+  //   }
+  // };
 
   useEffect(() => {
 
