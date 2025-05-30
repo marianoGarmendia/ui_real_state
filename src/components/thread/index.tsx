@@ -333,6 +333,7 @@ export function Thread() {
     }, 1000); // Espera de 1 segundo
 
     return () => clearTimeout(timer); // Limpieza del temporizador al desmontar
+    
   }, [firstMessageRef, threadId]);
 
   useEffect(() => {
