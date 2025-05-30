@@ -3,8 +3,7 @@
 import React, { useEffect, useState } from "react";
 // import { Volume2 } from "lucide-react";
 
-
-import {useVoiceChat} from "@/contexts/VoiceChatContexts";
+import { useVoiceChat } from "@/contexts/VoiceChatContexts";
 
 // ElevenLabs
 import { useConversation } from "@11labs/react";
@@ -17,31 +16,30 @@ import { Card } from "@/components/ui/card";
 // import { stat } from "fs";
 // import { add } from "lodash";
 
-
 const VoiceChat = () => {
-  const [hasPermission,  setHasPermission] = useState(false);
+  const [hasPermission, setHasPermission] = useState(false);
   // const [isMuted, setIsMuted] = useState(true);
-  const [  errorMessage,  setErrorMessage] = useState("");
-  const { addMessageUser, addMessageAi, setMessagesConversation } = useVoiceChat();
+  const [errorMessage, setErrorMessage] = useState("");
+  const { addMessageUser, addMessageAi, setMessagesConversation } =
+    useVoiceChat();
 
   const handleRenewalConersation = async () => {
-    const conversationId = await handleStartConversation();
-    if(conversationId) {
-      conversation.sendUserMessage("Al perecer se cortó la conexión, retomemos la conversacion desde el ultimo mensaje")
+    const conversationId =  await conversation.startSession({
+              agentId: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID!,
+            });
+    if (conversationId) {
+      conversation.sendUserMessage(
+        "Al perecer se cortó la conexión, retomemos la conversacion desde el ultimo mensaje",
+      );
     }
-    
-  }
-  
- console.log("errorMessage: ", errorMessage);
- console.log("hasPermission: ", hasPermission);
+  };
 
+  console.log("errorMessage: ", errorMessage);
+  console.log("hasPermission: ", hasPermission);
 
   const conversation = useConversation({
     onConnect: () => {
       console.log("Connected to ElevenLabs");
-      handleStartConversation();
-
-        
     },
     onDisconnect: () => {
       console.log("Disconnected from ElevenLabs");
@@ -49,54 +47,63 @@ const VoiceChat = () => {
     },
     onMessage: (message) => {
       console.log("Received message:", message);
-      console.log("Message content: ", message.message ,"de: ",message.source);
-      const messageId = message.message === "" ? `"do-not-render-" + ${Date.now().toString()}` : Date.now().toString();
-      setMessagesConversation((prev) => [...prev, {text: message.message, source: message.source, id:messageId}]);
-     if( message.source === "user" ) {
+      console.log("Message content: ", message.message, "de: ", message.source);
+      const messageId =
+        message.message === ""
+          ? `"do-not-render-" + ${Date.now().toString()}`
+          : Date.now().toString();
+      setMessagesConversation((prev) => [
+        ...prev,
+        { text: message.message, source: message.source, id: messageId },
+      ]);
+      if (message.source === "user") {
         addMessageUser({
-          source: message.source ,
+          source: message.source,
           text: message.message,
           id: Date.now().toString(),
         });
-     }else if( message.source === "ai" ) {
+      } else if (message.source === "ai") {
         addMessageAi({
-          source: message.source ,
+          source: message.source,
           text: message.message,
           id: Date.now().toString(),
         });
-
-        
-     }
+      }
     },
     onError: (error: string | Error) => {
       setErrorMessage(typeof error === "string" ? error : error.message);
       console.error("Error:", error);
     },
-    onUnhandledClientToolCall:(toolCall) => {
+    onUnhandledClientToolCall: (toolCall) => {
       console.log("Unhandled client tool call:", toolCall);
     },
     onDebug: (debugInfo) => {
       console.log("Debug info:", debugInfo);
-      
-    }    
-    
-
-    
+    },
   });
 
   const { isSpeaking } = conversation;
-
-
-   
- 
-
-
 
   useEffect(() => {
     // Request microphone permission on component mount
     const requestMicPermission = async () => {
       try {
         await navigator.mediaDevices.getUserMedia({ audio: true });
+        const handleStartConversation = async () => {
+          try {
+            // Replace with your actual agent ID or URL
+            const conversationId = await conversation.startSession({
+              agentId: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID!,
+            });
+            console.log("Started conversation:", conversationId);
+            return conversationId;
+          } catch (error) {
+            setErrorMessage("Failed to start conversation");
+            console.error("Error starting conversation:", error);
+          }
+        };
+
+        handleStartConversation();
         setHasPermission(true);
       } catch (error) {
         setErrorMessage("Microphone access denied");
@@ -105,24 +112,7 @@ const VoiceChat = () => {
     };
 
     requestMicPermission();
-  }, []);
-
-  const handleStartConversation = async () => {
-    try {
-      // Replace with your actual agent ID or URL
-      const conversationId = await conversation.startSession({
-        agentId: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID!,
-        
-
-   
-      });
-      console.log("Started conversation:", conversationId);
-      return conversationId;
-    } catch (error) {
-      setErrorMessage("Failed to start conversation");
-      console.error("Error starting conversation:", error);
-    }
-  };
+  }, [conversation]);
 
   // const handleEndConversation = async () => {
   //   try {
@@ -146,23 +136,19 @@ const VoiceChat = () => {
   // useEffect(() => {
 
   //   if(status === "disconnected") {
-      
+
   // };
   // handleStartConversation()
   //   }
   //   if(status === "connected") {
   //     console.log("snd first message");
-      
+
   //   }
-   
-  
+
   // },[status]);
 
-
-
-
   return (
-    <Card className="w-full rounded-full flex justify-center items-center max-w-md mx-auto">
+    <Card className="mx-auto flex w-full max-w-md items-center justify-center rounded-full">
       {/* <CardHeader>
         <CardTitle className="flex items-center justify-between">
           Voice Chat
@@ -206,46 +192,41 @@ const VoiceChat = () => {
             )}
           </div> */}
 
-         <p className="text-green-600">
-                {isSpeaking ? "Carla está hablando..." : "Escuchando o procesando..."}
-        </p>
-     <div className="relative w-32 h-32 flex items-center justify-center">
-       
-      {isSpeaking && (
-        <span className="absolute w-full h-full rounded-full bg-red-500 animate-ping-smooth" />
-      )}
-      <div
-        className={`z-10 w-16 h-16 rounded-full ${
-          isSpeaking ? "bg-red-600" : "bg-gray-400"
-        } transition-colors duration-300`}
-      />
-      <style jsx>{`
-        @keyframes ping-smooth {
-          0% {
-            transform: scale(1);
-            opacity: 0.6;
+      <p className="text-green-600">
+        {isSpeaking ? "Carla está hablando..." : "Escuchando o procesando..."}
+      </p>
+      <div className="relative flex h-32 w-32 items-center justify-center">
+        {isSpeaking && (
+          <span className="animate-ping-smooth absolute h-full w-full rounded-full bg-red-500" />
+        )}
+        <div
+          className={`z-10 h-16 w-16 rounded-full ${
+            isSpeaking ? "bg-red-600" : "bg-gray-400"
+          } transition-colors duration-300`}
+        />
+        <style jsx>{`
+          @keyframes ping-smooth {
+            0% {
+              transform: scale(1);
+              opacity: 0.6;
+            }
+            50% {
+              transform: scale(1.5);
+              opacity: 0.2;
+            }
+            100% {
+              transform: scale(1);
+              opacity: 0;
+            }
           }
-          50% {
-            transform: scale(1.5);
-            opacity: 0.2;
+
+          .animate-ping-smooth {
+            animation: ping-smooth 1.2s ease-in-out infinite;
           }
-          100% {
-            transform: scale(1);
-            opacity: 0;
-          }
-        }
+        `}</style>
+      </div>
 
-        .animate-ping-smooth {
-          animation: ping-smooth 1.2s ease-in-out infinite;
-        }
-      `}</style>
-        
-    </div>
-  
-
-          
-
-          {/* <div className="text-center text-sm">
+      {/* <div className="text-center text-sm">
             {status === "connected" && (
               <p className="text-green-600">
                 {isSpeaking ? "Agent is speaking..." : "Listening..."}
@@ -258,7 +239,7 @@ const VoiceChat = () => {
               </p>
             )}
           </div> */}
-        {/* </div>
+      {/* </div>
       </CardContent> */}
     </Card>
   );
