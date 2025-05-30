@@ -141,7 +141,24 @@ const VoiceChat = () => {
   useEffect(() => {
 
     if(status === "disconnected") {
-      handleStartConversation();
+       const handleStartConversation= async () => {
+    try {
+      // Replace with your actual agent ID or URL
+      const conversationId = await conversation.startSession({
+        agentId: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID!,
+        
+
+   
+      });
+      console.log("Started conversation:", conversationId);
+      return conversationId;
+    } catch (error) {
+      setErrorMessage("Failed to start conversation");
+      console.error("Error starting conversation:", error);
+    }
+
+  };
+  handleStartConversation()
     }
     if(status === "connected") {
       console.log("snd first message");
@@ -150,7 +167,7 @@ const VoiceChat = () => {
     }
    
   
-  },[status]);
+  },[status, conversation]);
 
 
 

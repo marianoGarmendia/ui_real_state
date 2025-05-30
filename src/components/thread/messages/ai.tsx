@@ -12,7 +12,7 @@ import { MessageContentComplex } from "@langchain/core/messages";
 import { Fragment } from "react/jsx-runtime";
 import { isAgentInboxInterruptSchema } from "@/lib/agent-inbox-interrupt";
 import { ThreadView } from "../agent-inbox";
-import { useQueryState, parseAsBoolean} from "nuqs";
+
 import {useState} from "react";
 import { GenericInterruptView } from "./generic-interrupt";
 
@@ -134,7 +134,7 @@ export function AssistantMessage({
   //   parseAsBoolean.withDefault(true),
   // );
 
-  const [hideToolCalls, setHideToolCalls] = useState(true)
+  const [hideToolCalls] = useState(true)
 
   const thread = useStreamContext();
   const isLastMessage =
