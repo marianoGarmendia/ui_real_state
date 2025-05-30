@@ -11,6 +11,7 @@ import { useConversation } from "@11labs/react";
 // UI
 // import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { stat } from "fs";
 
 // import { Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 // import { stat } from "fs";
@@ -34,7 +35,7 @@ const VoiceChat = () => {
     }
   };
 
-  console.log("errorMessage: ", errorMessage);
+  
   console.log("hasPermission: ", hasPermission);
 
   const conversation = useConversation({
@@ -82,7 +83,14 @@ const VoiceChat = () => {
     },
   });
 
-  const { isSpeaking } = conversation;
+  const {status,  isSpeaking } = conversation;
+
+  useEffect(() => {
+    if(status === "connected") {
+    
+      conversation.sendUserMessage("Hola!");
+    }
+  },[status]);
 
   useEffect(() => {
     // Request microphone permission on component mount
@@ -112,7 +120,7 @@ const VoiceChat = () => {
     };
 
     requestMicPermission();
-  }, [conversation]);
+  }, []);
 
   // const handleEndConversation = async () => {
   //   try {

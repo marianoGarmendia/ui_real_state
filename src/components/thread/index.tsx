@@ -205,7 +205,7 @@ export function Thread() {
         }),
       },
     );
-  }, [messagesVoicesUser, reference, stream]);
+  }, [messagesVoicesUser]);
 
   // Tomo la cola de mensajes y los proceso uno a uno enviandoselos a mi backend donde est el agente
   //   useEffect(() => {
@@ -334,7 +334,7 @@ export function Thread() {
 
     return () => clearTimeout(timer); // Limpieza del temporizador al desmontar
     
-  }, [firstMessageRef, threadId, stream, reference]);
+  }, [firstMessageRef]);
 
   useEffect(() => {
     if (!stream.error) {
