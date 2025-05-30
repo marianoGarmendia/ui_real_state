@@ -206,11 +206,11 @@ const VoiceChat = () => {
             )}
           </div> */}
 
-        
-     <div className="relative w-32 h-32 flex items-center justify-center">
-        <p className="text-green-600">
+         <p className="text-green-600">
                 {isSpeaking ? "Carla está hablando..." : "Escuchando o procesando..."}
         </p>
+     <div className="relative w-32 h-32 flex items-center justify-center">
+       
       {isSpeaking && (
         <span className="absolute w-full h-full rounded-full bg-red-500 animate-ping-smooth" />
       )}
