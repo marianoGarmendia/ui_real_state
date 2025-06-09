@@ -91,7 +91,6 @@ export function Thread() {
   const [reference] = useQueryState("reference");
   const {
     messagesVoicesUser,
-
     messagesConversation,
   } = useVoiceChat();
 
